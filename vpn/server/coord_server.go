@@ -16,9 +16,12 @@ type Node struct {
 
 func New_Node(address string, port string) *Node {
 	return &Node{
-		Address:  address,
-		Port:     port,
-		Listener: nil,
+		Address:     address,
+		Port:        port,
+		Next:        nil,
+		Prev:        nil,
+		Route_table: make(map[string]string),
+		Listener:    nil,
 	}
 }
 
@@ -45,6 +48,11 @@ func (network *Network) Add_Node_to_Network(address string, port string) {
 		Node_to_Add.Next = network.Head
 		network.Head = Node_to_Add
 	}
+
+	/* TODO - generate public key...map[address]public_keyo */
+	// add new node info to route table
+	// this is a placeholder
+	network.Head.Route_table[address] = port
 }
 
 /*
