@@ -1,36 +1,66 @@
 package server
 
 import (
-	"fmt"
-	"log"
 	"net"
+	"sync"
 )
 
 type Node struct {
-	private_key string
-	public_key  string
-	address     string
-	port        string
+	Address     string
+	Port        string
+	Next        *Node
+	Prev        *Node
+	Route_table map[string]string
+	Listener    net.Listener
 }
 
+func New_Node(address string, port string) *Node {
+	return &Node{
+		Address:  address,
+		Port:     port,
+		Listener: nil,
+	}
+}
+
+type Network struct {
+	mu   sync.Mutex
+	Head *Node
+}
+
+func New_Network() *Network {
+	return &Network{
+		Head: nil,
+	}
+}
+
+func (network *Network) Add_Node_to_Network(address string, port string) {
+	network.mu.Lock()
+	defer network.mu.Unlock()
+
+	Node_to_Add := New_Node(address, port)
+
+	if network.Head == nil {
+		network.Head = Node_to_Add
+	} else {
+		Node_to_Add.Next = network.Head
+		network.Head = Node_to_Add
+	}
+}
+
+/*
 type Coord_Server struct {
 	port    string
 	address string
 }
+*/
 
 const (
 	COORD_PORT = "8080"
 	COORD_ADDR = "127.0.0.1"
 )
 
-func New_Node(private_key string, public_key string, address string, port string) *Node {
-	return &Node{
-		private_key: private_key,
-		public_key:  public_key,
-		address:     address,
-		port:        port,
-	}
-}
+/*
+OLD IDEA
 
 func New_coord_server() *Coord_Server {
 	return &Coord_Server{
@@ -61,3 +91,4 @@ func (c *Coord_Server) Start_coord_server() {
 		}(conn)
 	}
 }
+*/
