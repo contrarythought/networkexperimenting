@@ -1,26 +1,25 @@
 package server
 
 import (
+	"fmt"
+	"log"
 	"net"
+	"strings"
 	"sync"
 )
 
 type Node struct {
 	Address     string
 	Port        string
-	Next        *Node
-	Prev        *Node
-	Route_table map[string]string
+	Route_table map[Conn_info]bool
 	Listener    net.Listener
 }
 
-func New_Node(address string, port string) *Node {
+func New_Node(address string, port string, ip_table map[Conn_info]bool) *Node {
 	return &Node{
 		Address:     address,
 		Port:        port,
-		Next:        nil,
-		Prev:        nil,
-		Route_table: make(map[string]string),
+		Route_table: ip_table,
 		Listener:    nil,
 	}
 }
@@ -36,6 +35,7 @@ func New_Network() *Network {
 	}
 }
 
+/*
 func (network *Network) Add_Node_to_Network(address string, port string) {
 	network.mu.Lock()
 	defer network.mu.Unlock()
@@ -49,38 +49,42 @@ func (network *Network) Add_Node_to_Network(address string, port string) {
 		network.Head = Node_to_Add
 	}
 
-	/* TODO - generate public key...map[address]public_keyo */
+	// TODO - generate public key...map[address]public_keyo 
 	// add new node info to route table
 	// this is a placeholder
 	network.Head.Route_table[address] = port
 }
-
-/*
-type Coord_Server struct {
-	port    string
-	address string
-}
 */
+
+type Coord_Server struct {
+	Port    string
+	Address string
+	IPTable map[Conn_info]bool
+	mu sync.Mutex
+}
+
+type Conn_info struct {
+	IP string
+	Port string
+}
 
 const (
 	COORD_PORT = "8080"
 	COORD_ADDR = "127.0.0.1"
 )
 
-/*
-OLD IDEA
-
 func New_coord_server() *Coord_Server {
 	return &Coord_Server{
-		port:    COORD_PORT,
-		address: COORD_ADDR,
+		Port:    COORD_PORT,
+		Address: COORD_ADDR,
+		IPTable: make(map[Conn_info]bool),
 	}
 }
 
 var err_failed_connection error = fmt.Errorf("connection failed\n")
 
-func (c *Coord_Server) Start_coord_server() {
-	l, err := net.Listen("tcp", COORD_ADDR+COORD_PORT)
+func (c *Coord_Server) Start_coord_server() map[Conn_info]bool {
+	l, err := net.Listen("tcp", COORD_ADDR+":"+COORD_PORT)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,10 +97,27 @@ func (c *Coord_Server) Start_coord_server() {
 			conn.Close()
 		}
 
-		// TODO - handle connections concurrently
+		var IP, port string
+
 		go func(connection net.Conn) {
-			fmt.Println(connection.RemoteAddr().String())
+			c.mu.Lock()
+			defer c.mu.Unlock()
+			conn_str := strings.Split(connection.RemoteAddr().String(), ":")
+			
+			IP = conn_str[0]
+			port = conn_str[1]
+
+			conn_info := Conn_info {
+				IP: IP,
+				Port: port,
+			}
+
+			// store connection's ip address into the server's ip table if it is a new connection
+			if c.IPTable[conn_info] == false {
+				c.IPTable[conn_info] = true	
+			} 
 		}(conn)
+
+		return c.IPTable
 	}
 }
-*/
