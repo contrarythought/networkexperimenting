@@ -10,11 +10,16 @@ import (
 	"sync"
 )
 
-type Coord_Server struct {
+type CoordServer struct {
 	Address    string
 	Port       string
-	RouteTable map[string]bool
-	mu         sync.Mutex
+	RouteTable map[NodeEntry]bool
+	mu         sync.Mutex	
+}
+
+type NodeEntry struct {
+	PrivateIP string
+	PublicIP string
 }
 
 type PathResolver struct {
@@ -26,11 +31,11 @@ const (
 	COORD_ADDR = "127.0.0.1"
 )
 
-func (c *Coord_Server) NewCoordServer() *Coord_Server {
-	return &Coord_Server{
+func (c *CoordServer) NewCoordServer() *CoordServer {
+	return &CoordServer{
 		Address:    COORD_ADDR,
 		Port:       COORD_PORT,
-		RouteTable: make(map[string]bool),
+		RouteTable: make(map[NodeEntry]bool),
 	}
 }
 
@@ -58,17 +63,22 @@ func (p *PathResolver) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	http.NotFound(res, req)
 }
 
-func (c *Coord_Server) GetRouteTable(res http.ResponseWriter, req *http.Request) {
-	b, err := json.Marshal(c.RouteTable)
+func (c *CoordServer) GetRouteTable(res http.ResponseWriter, req *http.Request) {
+	b, err := json.MarshalIndent(c.RouteTable, "", "    ")
 	if err != nil {
 		log.Fatal(err)
 	}
 	res.Write(b)
 }
 
-func (c *Coord_Server) AddConnection(res http.ResponseWriter, req *http.Request) {
+func (c *CoordServer) AddConnection(res http.ResponseWriter, req *http.Request) {
 	request := strings.Split(req.URL.Path, "/")
-	if c.RouteTable[request[1]] == false {
-		c.RouteTable[request[1]] = true
+	publicIP := req.RemoteAddr
+	node := NodeEntry {
+		PrivateIP: request[1],
+		PublicIP: publicIP,
+	}
+	if c.RouteTable[node] == false {
+		c.RouteTable[node] = true
 	}
 }
